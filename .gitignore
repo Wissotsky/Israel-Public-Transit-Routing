@@ -1,0 +1,4 @@
+GtfsData/
+.vscode
+IsraelTransitRouterCLI/bin/*
+IsraelTransitRouterCLI/obj/*
