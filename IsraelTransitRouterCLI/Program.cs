@@ -8,14 +8,14 @@ const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
 const int START_STOP_ID = 21271; // code 54135
 const int END_STOP_ID = 13499; //code 25380
 
-List<int> arrivalTimestamp = new List<int>(STOPS_COUNT); 
-List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)> inConnection = new List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)>(STOPS_COUNT);
+int[] arrivalTimestamp = new int[STOPS_COUNT]; 
+(string tripId,int depStop,int arrStop,int depTime,int arrTime)[] inConnection = new (string tripId,int depStop,int arrStop,int depTime,int arrTime)[STOPS_COUNT];
 
 // initialize stations
 for (int i = 0; i < STOPS_COUNT; i++)
 {
-    arrivalTimestamp.Add(int.MaxValue);
-    inConnection.Add(("0",0,0,0,0));
+    arrivalTimestamp[i] = int.MaxValue;
+    inConnection[i] = ("0",0,0,0,0);
 }
 
 // set timestamp on our start stop
