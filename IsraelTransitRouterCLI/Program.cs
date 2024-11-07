@@ -102,9 +102,8 @@ while ((entry = stopTimesReader.ReadLine()) != null)
     (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = (tripId,arrivalTime,departureTime,stopId);
 }
 
-Console.WriteLine("CSA Done!");
-Console.WriteLine(inConnection[END_STOP_ID].tripId);
-//List<(string,int,int,int,int)> tripConnections = new List<(string,int,int,int,int)>();
+Console.WriteLine("Router Done!");
+List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)> tripConnections = new List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)>();
 
 TraversePath(inConnection[END_STOP_ID],0);
 
@@ -113,10 +112,43 @@ void TraversePath((string tripId,int depStop,int arrStop,int depTime,int arrTime
     if (connection.arrStop != START_STOP_ID && connection.arrStop != 0)
     {
         depth++;
-        Console.WriteLine($"[{connection.tripId}] {stopNames[connection.depStop]}[{connection.depStop}] -> {stopNames[connection.arrStop]}[{connection.arrStop}], {SecondsToString(connection.depTime)} -> {SecondsToString(connection.arrTime)}");
+        tripConnections.Add(connection);
         TraversePath(inConnection[connection.depStop],depth);
     }
 }
+
+Console.WriteLine("Connection Traversal Done!");
+
+(string tripId,int depStop,int arrStop,int depTime,int arrTime) currentConnection = ("",0,0,0,0);
+for (int i = tripConnections.Count - 1; i >= 0 ; i--)
+{
+    var connection = tripConnections[i];
+    if (currentConnection.tripId == "")
+    {
+        // initialize first connection
+        currentConnection = connection;
+    }
+    if (connection.tripId == currentConnection.tripId)
+    {
+        //If were currently walking within a connection
+        currentConnection.arrStop = connection.arrStop;
+        currentConnection.arrTime = connection.arrTime;
+    }
+    else {
+        // We walked out of the current connection
+        Console.WriteLine($"[{currentConnection.tripId}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+        // Reintialize the current connection for the new trip leg
+        currentConnection = connection;
+    }
+}
+// This is the last leg of the trip
+Console.WriteLine($"[{currentConnection.tripId}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+/*
+foreach (var connection in tripConnections)
+{
+    Console.WriteLine($"[{connection.tripId}] {stopNames[connection.depStop]}[{connection.depStop}] -> {stopNames[connection.arrStop]}[{connection.arrStop}], {SecondsToString(connection.depTime)} -> {SecondsToString(connection.arrTime)}");
+}
+*/
 
 (string tripId, int arrivalTime, int departureTime, int stopId) ParseEntry(string entry)
 {
