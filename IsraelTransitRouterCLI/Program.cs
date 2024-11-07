@@ -1,8 +1,11 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using System.Text;
+
 Console.WriteLine("Hello, World!");
 
 using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
-//using StreamReader stopsReader = new("GtfsData\\stops.txt");
+
+Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
 const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
 const int START_STOP_ID = 21271; // code 54135
@@ -21,11 +24,25 @@ for (int i = 0; i < STOPS_COUNT; i++)
 // set timestamp on our start stop
 arrivalTimestamp[START_STOP_ID] = 0;
 
-//string stopEntry;
-//while ((stopEntry = stopsReader.ReadLine()) != null)
-//{
-//    Console.WriteLine(stopEntry);
-//}
+int[] stopCodes = new int[STOPS_COUNT]; 
+string[] stopNames = new string[STOPS_COUNT]; 
+
+using StreamReader stopsReader = new("GtfsData\\stops.txt");
+
+string stopEntry;
+while ((stopEntry = stopsReader.ReadLine()) != null)
+{
+    string[] splitEntry = stopEntry.Split(',');
+    if (splitEntry[0] == "stop_id") { continue; }
+
+    int stopId = int.Parse(splitEntry[0]);
+    int stopCode = int.Parse(splitEntry[1]);
+    string stopName = splitEntry[2];
+
+    stopCodes[stopId] = stopCode;
+    stopNames[stopId] = stopName;
+
+}
 
 string previousEntry = "0,0,0,0"; // I need to write a parser that atleast pretends to be robust
 var (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = ParseEntry(previousEntry);
@@ -61,7 +78,7 @@ void TraversePath((string tripId,int depStop,int arrStop,int depTime,int arrTime
     if (connection.arrStop != START_STOP_ID && connection.arrStop != 0)
     {
         depth++;
-        Console.WriteLine($"[{connection.tripId}] {connection.depStop} -> {connection.arrStop}, {connection.depTime}:{connection.arrTime}");
+        Console.WriteLine($"[{connection.tripId}] {stopNames[connection.depStop]} -> {stopNames[connection.arrStop]}, {connection.depTime}:{connection.arrTime}");
         TraversePath(inConnection[connection.depStop],depth);
     }
 }
