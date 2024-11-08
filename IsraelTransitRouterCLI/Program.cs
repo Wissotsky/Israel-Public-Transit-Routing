@@ -189,12 +189,15 @@ void TraversePath((string tripId,int depStop,int arrStop,int depTime,int arrTime
 Console.WriteLine("Connection Traversal Done!");
 
 (string tripId,int depStop,int arrStop,int depTime,int arrTime) currentConnection = ("",0,0,0,0);
+int tripLegCount = 0;
+int tripTimeInSeconds = 0;
 for (int i = tripConnections.Count - 1; i >= 0 ; i--)
 {
     var connection = tripConnections[i];
     if (currentConnection.tripId == "")
     {
         // initialize first connection
+        tripTimeInSeconds = connection.depTime; // Set trip time to departure time
         currentConnection = connection;
     }
     if (connection.tripId == currentConnection.tripId)
@@ -204,6 +207,7 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
         currentConnection.arrTime = connection.arrTime;
     }
     else {
+        tripLegCount+=1;
         // We walked out of the current connection
         Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
         // Reintialize the current connection for the new trip leg
@@ -211,7 +215,11 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
     }
 }
 // This is the last leg of the trip
+tripLegCount+=1;
+tripTimeInSeconds = currentConnection.arrTime - tripTimeInSeconds;
 Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+
+Console.WriteLine($"Trip time: {SecondsToString(tripTimeInSeconds)} Legs: {tripLegCount}");
 /*
 foreach (var connection in tripConnections)
 {
