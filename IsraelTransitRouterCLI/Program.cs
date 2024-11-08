@@ -1,9 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Text;
 
-Console.WriteLine("Hello, World!");
-
-using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
+Console.WriteLine("Starting...");
 
 Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
@@ -11,6 +9,9 @@ const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
 const int ROUTES_COUNT = 40000; // Highest route Id is at about 40k
 const int START_STOP_ID = 21271; // code 54135
 const int END_STOP_ID = 13499; //code 25380
+
+// List that stores strings which we failed to translate to avoid repeated error messages
+HashSet<string> untranslatableStrings = new HashSet<string>();
 
 
 // We use sparse arrays for these because the indexed lookup afterwards is very fast
@@ -28,7 +29,6 @@ for (int i = 0; i < STOPS_COUNT; i++)
 arrivalTimestamp[START_STOP_ID] = 0;
 
 // Load translations.txt
-
 Dictionary<string,string> translationsTable = new Dictionary<string, string>();
 //Dictionary<string,List<string>> wordTranslationsTable = new Dictionary<string, List<string>>();
 
@@ -49,6 +49,7 @@ while ((translationEntry = translationsReader.ReadLine()) != null)
     }
 }
 
+Console.WriteLine("Translations Loading Done!");
 
 // Load stops.txt
 int[] stopCodes = new int[STOPS_COUNT]; 
@@ -70,7 +71,11 @@ while ((stopEntry = stopsReader.ReadLine()) != null)
     if (!translationsTable.TryGetValue(stopName,out stopNameEn))
     {
         // if we cant translate the stop name
-        Console.WriteLine($"[TRANSLATION ERROR] {stopName} not found");
+        if (!untranslatableStrings.Contains(stopName))
+        {   
+            untranslatableStrings.Add(stopName);
+            Console.WriteLine($"[TRANSLATION ERROR] {stopName} not found");
+        }
         stopNameEn = stopName;
     }
 
@@ -78,6 +83,8 @@ while ((stopEntry = stopsReader.ReadLine()) != null)
     stopNames[stopId] = stopNameEn;
 
 }
+
+Console.WriteLine("Stops Loading Done!");
 
 // Load trips.txt
 Dictionary<string,int> tripId2RouteId = new Dictionary<string,int>();
@@ -104,18 +111,23 @@ while ((tripEntry = tripsReader.ReadLine()) != null)
         if (!translationsTable.TryGetValue(tripHeadsignPart,out tripHeadsignPartEn))
         {
             // if we cant translate the stop name
-            Console.WriteLine($"[TRANSLATION ERROR] {tripHeadsignPart} not found");
+            if (!untranslatableStrings.Contains(tripHeadsignPart))
+            {
+                // Avoid some of the log duplication
+                untranslatableStrings.Add(tripHeadsignPart);
+                Console.WriteLine($"[TRANSLATION ERROR] {tripHeadsignPart} not found");
+            }
             tripHeadsignPartEn = tripHeadsignPart;
         }
         tripHeadsignEn.Add(tripHeadsignPartEn);
     }
 
-
-
     tripId2RouteId.Add(tripId,routeId);
     tripId2ServiceId.Add(tripId,serviceId);
     tripId2TripHeadsign.Add(tripId,string.Join('-',tripHeadsignEn));
 }
+
+Console.WriteLine("Trips Loading Done!");
 
 // Load routes.txt
 // This is basically a sparse array for quick lookups // TODO: Considering the lookups only happen when we print out the legs it might not be worth keeping in memory all the time.
@@ -135,10 +147,13 @@ while ((routeEntry = routesReader.ReadLine()) != null)
     routeShortNames[routeId] = routeShortName;
 }
 
+Console.WriteLine("Routes Loading Done!");
+
 string previousEntry = "0,00:00:00,00:00:01,0"; // I need to write a parser that atleast pretends to be robust
 var (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = ParseEntry(previousEntry);
 
 // Simplest CSA Implementation possible, runs while parsing the text files
+using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
 string entry;
 while ((entry = stopTimesReader.ReadLine()) != null)
 {
@@ -155,7 +170,8 @@ while ((entry = stopTimesReader.ReadLine()) != null)
     (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = (tripId,arrivalTime,departureTime,stopId);
 }
 
-Console.WriteLine("Router Done!");
+Console.WriteLine("Transit Routing Done!");
+
 List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)> tripConnections = new List<(string tripId,int depStop,int arrStop,int depTime,int arrTime)>();
 
 TraversePath(inConnection[END_STOP_ID],0);
