@@ -8,6 +8,7 @@ using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
 Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
 const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
+const int ROUTES_COUNT = 40000; // Highest route Id is at about 40k
 const int START_STOP_ID = 21271; // code 54135
 const int END_STOP_ID = 13499; //code 25380
 
@@ -29,6 +30,7 @@ arrivalTimestamp[START_STOP_ID] = 0;
 // Load translations.txt
 
 Dictionary<string,string> translationsTable = new Dictionary<string, string>();
+//Dictionary<string,List<string>> wordTranslationsTable = new Dictionary<string, List<string>>();
 
 using StreamReader translationsReader = new("GtfsData\\translations.txt");
 
@@ -39,13 +41,11 @@ while ((translationEntry = translationsReader.ReadLine()) != null)
     string[] splitTranslation = translationEntry.Split(','); // Ideally we would be using a proper csv parsing library, but I want to keep it as dumb and simple as possible
     if (splitTranslation[1] == "EN")
     {
+        // write to direct translations table
         string hebrewString = splitTranslation[0].Replace("''","\""); // Make sure gershayim are consistent
-        if (hebrewString.Contains("האמנים/עוזי"))
-        {
-            Console.WriteLine(hebrewString);
-        }
         string langString = splitTranslation[2];
         translationsTable.TryAdd(hebrewString,langString);
+
     }
 }
 
@@ -79,9 +79,66 @@ while ((stopEntry = stopsReader.ReadLine()) != null)
 
 }
 
+// Load trips.txt
+Dictionary<string,int> tripId2RouteId = new Dictionary<string,int>();
+Dictionary<string,int> tripId2ServiceId = new Dictionary<string,int>();
+Dictionary<string,string> tripId2TripHeadsign = new Dictionary<string, string>();
+
+using StreamReader tripsReader = new("GtfsData\\trips.txt");
+
+string tripEntry;
+while ((tripEntry = tripsReader.ReadLine()) != null)
+{
+    string[] splitEntry = tripEntry.Split(',');
+    if (splitEntry[0] == "route_id") { continue; }
+
+    int routeId = int.Parse(splitEntry[0]);
+    int serviceId = int.Parse(splitEntry[1]);
+    string tripId = splitEntry[2];
+    string[] tripHeadsign = splitEntry[3].Split('_');
+
+    List<string> tripHeadsignEn = new List<string>();
+    foreach (var tripHeadsignPart in tripHeadsign)
+    {
+        string tripHeadsignPartEn;
+        if (!translationsTable.TryGetValue(tripHeadsignPart,out tripHeadsignPartEn))
+        {
+            // if we cant translate the stop name
+            Console.WriteLine($"[TRANSLATION ERROR] {tripHeadsignPart} not found");
+            tripHeadsignPartEn = tripHeadsignPart;
+        }
+        tripHeadsignEn.Add(tripHeadsignPartEn);
+    }
+
+
+
+    tripId2RouteId.Add(tripId,routeId);
+    tripId2ServiceId.Add(tripId,serviceId);
+    tripId2TripHeadsign.Add(tripId,string.Join('-',tripHeadsignEn));
+}
+
+// Load routes.txt
+// This is basically a sparse array for quick lookups // TODO: Considering the lookups only happen when we print out the legs it might not be worth keeping in memory all the time.
+string[] routeShortNames = new string[ROUTES_COUNT]; 
+
+using StreamReader routesReader = new("GtfsData\\routes.txt");
+
+string routeEntry;
+while ((routeEntry = routesReader.ReadLine()) != null)
+{
+    string[] splitEntry = routeEntry.Split(',');
+    if (splitEntry[0] == "route_id") { continue; }
+
+    int routeId = int.Parse(splitEntry[0]);
+    string routeShortName = splitEntry[2];
+
+    routeShortNames[routeId] = routeShortName;
+}
+
 string previousEntry = "0,00:00:00,00:00:01,0"; // I need to write a parser that atleast pretends to be robust
 var (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = ParseEntry(previousEntry);
 
+// Simplest CSA Implementation possible, runs while parsing the text files
 string entry;
 while ((entry = stopTimesReader.ReadLine()) != null)
 {
@@ -89,16 +146,12 @@ while ((entry = stopTimesReader.ReadLine()) != null)
     if (tripId == "stop_id") { continue; }
     if (tripId == prevTripId)
     {
-        // print the transit connection
-        // We parse the times only when its valid
-        //Console.WriteLine($"[{tripId}] {prevStopId} {stopId} {ParseTime(prevDepartureTime)} {ParseTime(arrivalTime)}");
         if (arrivalTimestamp[prevStopId] < prevDepartureTime && arrivalTimestamp[stopId] > arrivalTime)
         {
             arrivalTimestamp[stopId] = arrivalTime;
             inConnection[stopId] = (tripId,prevStopId,stopId,prevDepartureTime,arrivalTime);
         }
     }
-    //Console.WriteLine($"[{tripId}] Stop:{stopId} {arrivalTime} -> {departureTime}");
     (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = (tripId,arrivalTime,departureTime,stopId);
 }
 
@@ -136,13 +189,13 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
     }
     else {
         // We walked out of the current connection
-        Console.WriteLine($"[{currentConnection.tripId}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+        Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
         // Reintialize the current connection for the new trip leg
         currentConnection = connection;
     }
 }
 // This is the last leg of the trip
-Console.WriteLine($"[{currentConnection.tripId}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
 /*
 foreach (var connection in tripConnections)
 {

@@ -8,13 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="GtfsData\\stop_times.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="GtfsData\\stops.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="GtfsData\\translations.txt">
+    <None Update="GtfsData\\stop_times.txt;GtfsData\\routes.txt;GtfsData\\stops.txt;GtfsData\\trips.txt;GtfsData\\translations.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
