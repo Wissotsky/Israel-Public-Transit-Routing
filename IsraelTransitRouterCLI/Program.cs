@@ -6,8 +6,19 @@ Console.WriteLine("Starting...");
 
 Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
-const string START_LOCATION = "Ashdod";
-const string END_LOCATION = "Tami";
+// Set up default start and end location
+string START_LOCATION = "Jerusalem";
+string END_LOCATION = "Tami";
+
+// Parse arguments to locations
+if(args.Length >= 1)
+{
+    START_LOCATION = args[0];
+    END_LOCATION = args[1];
+}
+
+Console.WriteLine($"Start Location: {START_LOCATION} End Location: {END_LOCATION}");
+
 
 const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
 const int ROUTES_COUNT = 40000; // Highest route Id is at about 40k
