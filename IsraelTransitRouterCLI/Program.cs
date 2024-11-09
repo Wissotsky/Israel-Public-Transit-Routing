@@ -1,18 +1,55 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Text;
+using System.Text.RegularExpressions;
 
 Console.WriteLine("Starting...");
 
 Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
+const string START_LOCATION = "Ashdod";
+const string END_LOCATION = "Tami";
+
 const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
 const int ROUTES_COUNT = 40000; // Highest route Id is at about 40k
-const int START_STOP_ID = 21271; // code 54135
-const int END_STOP_ID = 13499; //code 25380
+int START_STOP_ID = 21271; // code 54135
+int END_STOP_ID = 13499; //code 25380
+
+// HTTP client shenanigans, very scuffed.
+// Absolute dumbest way to geocode
+HttpClient httpClient = new HttpClient();
+
+HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Get,$"https://nominatim.openstreetmap.org/search?q=Bus%20Stop%20near%20{START_LOCATION}&format=geocodejson&countrycodes=il,ps&limit=1&extratags=1");
+httpRequestMessage.Headers.UserAgent.TryParseAdd("github.com/wissotsky");
+
+HttpResponseMessage responseMessage = httpClient.Send(httpRequestMessage);
+//Console.WriteLine(responseMessage);
+string jsonResponse = responseMessage.Content.ReadAsStringAsync().Result;
+//Console.WriteLine(jsonResponse);
+
+// Parsing json with a regex
+string regexBadPattern = @"""name"":""(.+?)""";
+Match match = Regex.Match(jsonResponse,regexBadPattern);
+string startStopName = $"{match.Groups[1]}"; // Force it to a string
+Console.WriteLine($"[GEOCODING] Start bus station: {startStopName}");
+
+//
+// Geocode End Location
+//
+
+HttpRequestMessage httpRequestMessage2 = new HttpRequestMessage(HttpMethod.Get,$"https://nominatim.openstreetmap.org/search?q=Bus%20Stop%20near%20{END_LOCATION}&format=geocodejson&countrycodes=il,ps&limit=1&extratags=1");
+httpRequestMessage2.Headers.UserAgent.TryParseAdd("github.com/wissotsky");
+
+HttpResponseMessage responseMessage2 = httpClient.Send(httpRequestMessage2);
+//Console.WriteLine(responseMessage2);
+string jsonResponse2 = responseMessage2.Content.ReadAsStringAsync().Result;
+//Console.WriteLine(jsonResponse2);
+
+Match match2 = Regex.Match(jsonResponse2,regexBadPattern);
+string endStopName = $"{match2.Groups[1]}"; // Force it to a string
+Console.WriteLine($"[GEOCODING] End bus station: {endStopName}");
 
 // List that stores strings which we failed to translate to avoid repeated error messages
 HashSet<string> untranslatableStrings = new HashSet<string>();
-
 
 // We use sparse arrays for these because the indexed lookup afterwards is very fast
 int[] arrivalTimestamp = new int[STOPS_COUNT]; 
@@ -26,7 +63,7 @@ for (int i = 0; i < STOPS_COUNT; i++)
 }
 
 // set timestamp on our start stop
-arrivalTimestamp[START_STOP_ID] = 0;
+//arrivalTimestamp[START_STOP_ID] = ParseTime("09:00:00");
 
 // Load translations.txt
 Dictionary<string,string> translationsTable = new Dictionary<string, string>();
@@ -54,6 +91,7 @@ Console.WriteLine("Translations Loading Done!");
 // Load stops.txt
 int[] stopCodes = new int[STOPS_COUNT]; 
 string[] stopNames = new string[STOPS_COUNT]; 
+string[] stopNamesEn = new string[STOPS_COUNT]; 
 
 using StreamReader stopsReader = new("GtfsData\\stops.txt");
 
@@ -74,13 +112,14 @@ while ((stopEntry = stopsReader.ReadLine()) != null)
         if (!untranslatableStrings.Contains(stopName))
         {   
             untranslatableStrings.Add(stopName);
-            Console.WriteLine($"[TRANSLATION ERROR] {stopName} not found");
+            //Console.WriteLine($"[TRANSLATION ERROR] {stopName} not found");
         }
         stopNameEn = stopName;
     }
 
     stopCodes[stopId] = stopCode;
-    stopNames[stopId] = stopNameEn;
+    stopNames[stopId] = stopName;
+    stopNamesEn[stopId] = stopNameEn;
 
 }
 
@@ -115,7 +154,7 @@ while ((tripEntry = tripsReader.ReadLine()) != null)
             {
                 // Avoid some of the log duplication
                 untranslatableStrings.Add(tripHeadsignPart);
-                Console.WriteLine($"[TRANSLATION ERROR] {tripHeadsignPart} not found");
+                //Console.WriteLine($"[TRANSLATION ERROR] {tripHeadsignPart} not found");
             }
             tripHeadsignPartEn = tripHeadsignPart;
         }
@@ -151,6 +190,14 @@ Console.WriteLine("Routes Loading Done!");
 
 string previousEntry = "0,00:00:00,00:00:01,0"; // I need to write a parser that atleast pretends to be robust
 var (prevTripId,prevArrivalTime,prevDepartureTime,prevStopId) = ParseEntry(previousEntry);
+
+// Get stop ids from geocode results
+START_STOP_ID = Array.IndexOf(stopNames,startStopName);
+END_STOP_ID = Array.IndexOf(stopNames,endStopName);
+
+
+// Initialize starting stop
+arrivalTimestamp[START_STOP_ID] = ParseTime("09:00:00");
 
 // Simplest CSA Implementation possible, runs while parsing the text files
 using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
@@ -209,7 +256,7 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
     else {
         tripLegCount+=1;
         // We walked out of the current connection
-        Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+        Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNamesEn[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNamesEn[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
         // Reintialize the current connection for the new trip leg
         currentConnection = connection;
     }
@@ -217,7 +264,7 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
 // This is the last leg of the trip
 tripLegCount+=1;
 tripTimeInSeconds = currentConnection.arrTime - tripTimeInSeconds;
-Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNames[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNames[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
+Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}] {stopNamesEn[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNamesEn[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
 
 Console.WriteLine($"Trip time: {SecondsToString(tripTimeInSeconds)} Legs: {tripLegCount}");
 /*
