@@ -9,7 +9,7 @@ Doesnt implement footpath transfers, so it sometimes gives bizarre results.
 
 ## Usage
 
-Download gtfs data from the ministry of transportation's website, and extract it to the `GtfsData` directory.
+Download gtfs data from the ministry of transportation's website, and extract it to a `IsraelPublicTransitRouterCLI/GtfsData` directory.
 URL: `https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip`
 
 Compile with dotnet cli
