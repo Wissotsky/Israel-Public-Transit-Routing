@@ -89,7 +89,7 @@ for (int i = 0; i < STOPS_COUNT; i++)
 Dictionary<string,string> translationsTable = new Dictionary<string, string>();
 //Dictionary<string,List<string>> wordTranslationsTable = new Dictionary<string, List<string>>();
 
-using StreamReader translationsReader = new("GtfsData\\translations.txt");
+using StreamReader translationsReader = new(Path.Combine("GtfsData", "translations.txt"));
 
 string translationEntry;
 while ((translationEntry = translationsReader.ReadLine()) != null)
@@ -114,7 +114,7 @@ string[] stopNames = new string[STOPS_COUNT];
 string[] stopNamesEn = new string[STOPS_COUNT]; 
 (float longitude, float latitude)[] stopLocations = new (float  longitude, float latitude)[STOPS_COUNT];
 
-using StreamReader stopsReader = new("GtfsData\\stops.txt");
+using StreamReader stopsReader = new(Path.Combine("GtfsData", "stops.txt"));
 
 string stopEntry;
 while ((stopEntry = stopsReader.ReadLine()) != null)
@@ -154,7 +154,7 @@ Dictionary<string,int> tripId2RouteId = new Dictionary<string,int>();
 Dictionary<string,int> tripId2ServiceId = new Dictionary<string,int>();
 Dictionary<string,string> tripId2TripHeadsign = new Dictionary<string, string>();
 
-using StreamReader tripsReader = new("GtfsData\\trips.txt");
+using StreamReader tripsReader = new(Path.Combine("GtfsData", "trips.txt"));
 
 string tripEntry;
 while ((tripEntry = tripsReader.ReadLine()) != null)
@@ -196,7 +196,7 @@ Console.WriteLine("Trips Loading Done!");
 // This is basically a sparse array for quick lookups // TODO: Considering the lookups only happen when we print out the legs it might not be worth keeping in memory all the time.
 string[] routeShortNames = new string[ROUTES_COUNT]; 
 
-using StreamReader routesReader = new("GtfsData\\routes.txt");
+using StreamReader routesReader = new(Path.Combine("GtfsData", "routes.txt"));
 
 string routeEntry;
 while ((routeEntry = routesReader.ReadLine()) != null)
@@ -216,7 +216,7 @@ Console.WriteLine("Routes Loading Done!");
 // The days of the week coulda just been a uint8
 (bool sunday,bool monday,bool tuesday,bool wednesday,bool thursday,bool friday,bool saturday,DateTime startTime, DateTime endTime)[] calendar = new (bool sunday,bool monday,bool tuesday,bool wednesday,bool thursday,bool friday,bool saturday,DateTime startTime, DateTime endTime)[SERVICES_COUNT];
 
-using StreamReader calendarReader = new("GtfsData\\calendar.txt");
+using StreamReader calendarReader = new(Path.Combine("GtfsData", "calendar.txt"));
 
 string calendarEntry;
 while ((calendarEntry = calendarReader.ReadLine()) != null)
@@ -278,7 +278,7 @@ arrivalTimestamp[START_STOP_ID] = Convert.ToInt32(timeSinceStartOfDay.TotalSecon
 Console.WriteLine("Routing...");
 
 // Simplest CSA Implementation possible, runs while parsing the text files
-using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
+using StreamReader stopTimesReader = new(Path.Combine("GtfsData", "stop_times.txt"));
 string entry;
 while ((entry = stopTimesReader.ReadLine()) != null)
 {
