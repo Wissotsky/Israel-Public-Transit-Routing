@@ -282,7 +282,7 @@ using StreamReader stopTimesReader = new(Path.Combine("GtfsData", "stop_times.tx
 string entry;
 while ((entry = stopTimesReader.ReadLine()) != null)
 {
-    if (entry.Split(',')[0] == "stop_id") { continue; } // This is probably killing perf lol
+    if (entry.Split(',')[0] == "trip_id") { continue; } // This is probably killing perf lol
     var (tripId,arrivalTime,departureTime,stopId) = ParseEntry(entry);
     if (!IsTripIdHappeningToday(tripId)) { continue; }
     if (tripId == prevTripId)
