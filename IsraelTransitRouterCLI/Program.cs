@@ -286,8 +286,13 @@ while ((entry = stopTimesReader.ReadLine()) != null)
     var (tripId,arrivalTime,departureTime,stopId) = ParseEntry(entry);
     if (!IsTripIdHappeningToday(tripId)) { continue; }
     if (tripId == prevTripId)
-    {
-        if (arrivalTimestamp[prevStopId] < prevDepartureTime && arrivalTimestamp[stopId] > arrivalTime)
+    {   
+        int interchangePenalty = 0;
+        if (inConnection[prevStopId].tripId != "0" && inConnection[prevStopId].tripId != tripId)
+        {
+            interchangePenalty = 10; // assume it takes 10 seconds to get off a bus
+        }
+        if (arrivalTimestamp[prevStopId] + interchangePenalty <= prevDepartureTime && arrivalTimestamp[stopId] > arrivalTime)
         {
             arrivalTimestamp[stopId] = arrivalTime;
             inConnection[stopId] = (tripId,prevStopId,stopId,prevDepartureTime,arrivalTime);
