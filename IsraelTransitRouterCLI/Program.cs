@@ -275,6 +275,8 @@ TimeSpan timeSinceStartOfDay = DateTime.Now - DateTime.Today;
 // Initialize starting stop
 arrivalTimestamp[START_STOP_ID] = Convert.ToInt32(timeSinceStartOfDay.TotalSeconds);
 
+Console.WriteLine("Routing...");
+
 // Simplest CSA Implementation possible, runs while parsing the text files
 using StreamReader stopTimesReader = new("GtfsData\\stop_times.txt");
 string entry;
