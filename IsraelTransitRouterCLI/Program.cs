@@ -8,8 +8,8 @@ Console.WriteLine("Starting...");
 Console.OutputEncoding = new UTF8Encoding(); // Fix hebrew rendering even though well probably move to english
 
 // Set up default start and end location
-string START_LOCATION = "Haifa";
-string END_LOCATION = "Hadera";
+string START_LOCATION = "Jerusalem";
+string END_LOCATION = "Tami";
 
 // Parse arguments to locations
 if(args.Length >= 1)
@@ -18,7 +18,7 @@ if(args.Length >= 1)
     END_LOCATION = args[1];
 }
 
-Console.WriteLine($"Start Location: {START_LOCATION} End Location: {END_LOCATION}");
+Console.WriteLine($"Start Location: '{START_LOCATION}' End Location: '{END_LOCATION}'");
 
 
 const int STOPS_COUNT = 51000; // The highest stop id seems to be at 51k
@@ -267,7 +267,7 @@ for (int i = 0; i < stopLocations.Count(); i++)
 
 START_STOP_ID = startId;
 END_STOP_ID = endId;
-Console.WriteLine($"Start Id:{START_STOP_ID} End Id:{END_STOP_ID}");
+Console.WriteLine($"Start Stop Id:{START_STOP_ID} End Stop Id:{END_STOP_ID}");
 
 
 TimeSpan timeSinceStartOfDay = DateTime.Now - DateTime.Today;
@@ -341,6 +341,11 @@ for (int i = tripConnections.Count - 1; i >= 0 ; i--)
 // This is the last leg of the trip
 tripLegCount+=1;
 tripTimeInSeconds = currentConnection.arrTime - tripTimeInSeconds;
+// I guess we didnt find a route
+if (currentConnection == ("",0,0,0,0))
+{
+    Console.WriteLine("[]Failed to find a route, footpath transfers are not implemented!");
+}
 Console.WriteLine($"[{routeShortNames[tripId2RouteId[currentConnection.tripId]]} {tripId2TripHeadsign[currentConnection.tripId]}][{currentConnection.tripId}] {stopNamesEn[currentConnection.depStop]}[{stopCodes[currentConnection.depStop]}] -> {stopNamesEn[currentConnection.arrStop]}[{stopCodes[currentConnection.arrStop]}], {SecondsToString(currentConnection.depTime)} -> {SecondsToString(currentConnection.arrTime)}");
 
 Console.WriteLine($"Trip time: {SecondsToString(tripTimeInSeconds)} Legs: {tripLegCount}");
